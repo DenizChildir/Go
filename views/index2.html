@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="">
+
+<head>
+    <title>{{ .title }} - Contact App</title>
+    <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.1">
+    <!-- <link rel="stylesheet" href="https://the.missing.style/v0.2.0/missing.min.css"> -->
+    <link rel="stylesheet" href="/static/site.css">
+    <script src="/static/js/htmx-1.8.0.js"></script>
+    <script src="/static/js/_hyperscript-0.9.7.js"></script>
+    <script src="/static/js/rsjs-menu.js" type="module"></script>
+    <script defer src="https://unpkg.com/alpinejs@3/dist/cdn.min.js"></script>
+</head>
+
+<body hx-boost="true">
+<main>
+    <header>
+        <h1>
+            <all-caps>contacts.app</all-caps>
+            <sub-title>A Demo Contacts Application</sub-title>
+        </h1>
+    </header>
+    {{ if .messages }}
+    {{ range .messages }}
+    <div class="flash">
+        {{ . }}
+    </div>
+    {{ end }}
+    {{ end }}
+
+    <form action="/contacts" method="get" class="tool-bar">
+        <label for="search">Search Term</label>
+        {{ if .search }}
+        <input id="search" type="search" name="q" value={{.search}} hx-get="/contacts"
+               hx-trigger="search, keyup delay:200ms changed" hx-target="tbody" hx-push-url="true" hx-indicator="#spinner" />
+        {{ else }}
+        <input id="search" type="search" name="q" value="" hx-get="/contacts" hx-trigger="search, keyup delay:200ms changed"
+               hx-target="tbody" hx-push-url="true" hx-indicator="#spinner" />
+        {{end}}
+        <img style="height: 20px" id="spinner" class="htmx-indicator" src="/static/img/spinning-circles.svg" />
+        <input type="submit" value="Search" />
+    </form>
+
+    <form x-data="{ selected: [] }">
+        <template x-if="selected.length > 0">
+            <div class="box info tool-bar flxed top">
+                <slot x-text="selected.length"></slot>
+                contacts selected
+
+                <button type="button" class="bad bg color border" @click="confirm(`Delete ${selected.length} contacts?`) &&
+                htmx.ajax('DELETE', '/contacts', { source: $root, target: document.body })">Delete</button>
+                <hr aria-orientation="vertical">
+                <button type="button" @click="selected = []">Cancel</button>
+            </div>
+        </template>
+        <table>
+            <thead>
+            <tr>
+                <th></th>
+                <th>First</th>
+                <th>Last</th>
+                <th>Phone</th>
+                <th>Email</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {{ range .contacts }}
+            <tr>
+                <td><input type="checkbox" name="selected_contact_ids" value="{{ .ID }}"
+                           x-model="selected"></td>
+                <td>{{ .First }}</td>
+                <td>{{ .Last }}</td>
+                <td>{{ .Phone }}</td>
+                <td>{{ .Email }}</td>
+                <td>
+                    <div data-overflow-menu>
+                        <button type="button" aria-haspopup="menu"
+                                aria-controls="contact-menu-{{ .ID }}"
+                        >Options</button>
+                        <div role="menu" hidden id="contact-menu-{{ .ID }}">
+                            <a role="menuitem" href="/contacts/{{ .ID }}/edit">Edit</a>
+                            <a role="menuitem" href="/contacts/{{ .ID }}">View</a>
+                            <a role="menuitem" href="#"
+                               hx-delete="/contacts/{{ .ID }}"
+                               hx-confirm="Are you sure you want to delete this contact?"
+                               hx-swap="outerHTML swap:1s"
+                               hx-target="closest tr">Delete</a>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            {{ end }}
+            </tbody>
+        </table>
+        <button hx-delete="/contacts" hx-confirm="Are you sure you want to delete these contacts?" hx-target="body">
+            Delete Selected Contacts
+        </button>
+    </form>
+    <p>
+        <a href="/contacts/new">Add Contact</a>
+        <span hx-get="/contacts/count" hx-trigger="revealed">
+        <img id="spinner" style="height: 20px" class="htmx-indicator" src="/static/img/spinning-circles.svg" />
+    </span>
+    </p>
+</main>
+</body>
+</html>
